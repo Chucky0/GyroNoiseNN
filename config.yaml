@@ -1,0 +1,57 @@
+# Загальні параметри
+file_paths:
+  - "ProgessiveOscill1.xlsx"
+  - "StableOscill0.xlsx"
+  - "StableOscill1.xlsx"
+  - "ProgessiveOscill0.xlsx"
+sensor_names:
+  - "NVGyro Z"
+  - "N1Gyro Z"
+  - "N2Gyro Z"
+  - "N3Gyro Z"
+  - "N4Gyro Z"
+  - "N5Gyro Z"
+  - "N6Gyro Z"
+  - "N7Gyro Z"
+  - "N8Gyro Z"
+
+# Параметри етапів
+stage1_end_time: 277.0
+stage2_start_time: 277.00001
+stage2_end_time: 1205.0
+stage3_start_time: 1205.00001
+
+# Параметри навчання
+window_size_nn: 1.0
+epochs: 100
+batch_size: 64
+val_size: 0.2
+
+# Параметри логування
+log_file: "logs/train.log"
+log_level: "INFO"
+
+# Параметри кешування
+cache_dir: "cache/"
+
+# Параметри графіків
+output_dir: "results/"
+
+# Файл для збереження чекпоінтів
+checkpoint_file: "checkpoints/checkpoint.pickle"
+
+# Параметри кожної моделі
+model_params:
+  RNN:
+    hidden_units: 50
+  LSTM:
+    hidden_units: 50
+  GRU:
+    hidden_units: 50
+  CNN:
+    filters: 64
+    kernel_size: 3
+  CNN_LSTM:
+    filters: 64
+    kernel_size: 3
+    lstm_units: 50
