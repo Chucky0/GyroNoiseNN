@@ -28,9 +28,9 @@ def load_and_preprocess_data(file_paths, window_size=100):
         stage2_end_time = 1205
 
         # Розділення на етапи
-        stage1_data = df[df['Time'] <= stage1_end_time]
-        stage2_data = df[(df['Time'] > stage1_end_time) & (df['Time'] <= stage2_end_time)]
-        stage3_data = df[df['Time'] > stage2_end_time]
+        stage1_data = df[df['Time'] <= stage1_end_time].copy()
+        stage2_data = df[(df['Time'] > stage1_end_time) & (df['Time'] <= stage2_end_time)].copy()
+        stage3_data = df[df['Time'] > stage2_end_time].copy()
 
         # Створення комбінацій етапів
         stage1_stage2_data = pd.concat([stage1_data, stage2_data])
@@ -38,12 +38,12 @@ def load_and_preprocess_data(file_paths, window_size=100):
         stage1_stage2_stage3_data = pd.concat([stage1_data, stage2_data, stage3_data])
 
         # Додавання міток етапів
-        stage1_data['Stage'] = 0
-        stage2_data['Stage'] = 1
-        stage3_data['Stage'] = 2
-        stage1_stage2_data['Stage'] = 3
-        stage2_stage3_data['Stage'] = 4
-        stage1_stage2_stage3_data['Stage'] = 5
+        stage1_data.loc[:, 'Stage'] = 0
+        stage2_data.loc[:, 'Stage'] = 1
+        stage3_data.loc[:, 'Stage'] = 2
+        stage1_stage2_data.loc[:, 'Stage'] = 3
+        stage2_stage3_data.loc[:, 'Stage'] = 4
+        stage1_stage2_stage3_data.loc[:, 'Stage'] = 5
 
         # Список всіх датафреймів
         all_stages_data = [
@@ -138,9 +138,9 @@ def load_and_preprocess_data(file_paths, window_size=100):
 import os
 
 file_paths = [
-    "C:\\Users\\super\\Desktop\\GyroDataProcessing\\GyroNoiseNet\\GyroNoiseNet\\StableOscill1.xlsx",
-    "C:\\Users\\super\\Desktop\\GyroDataProcessing\\GyroNoiseNet\\GyroNoiseNet\\ProgessiveOscill0.xlsx",
-    "C:\\Users\\super\\Desktop\\GyroDataProcessing\\GyroNoiseNet\\GyroNoiseNet\\ProgessiveOscill1.xlsx",
-    "C:\\Users\\super\\Desktop\\GyroDataProcessing\\GyroNoiseNet\\GyroNoiseNet\\StableOscill0.xlsx"
+    "C:\\Users\\GreatTomato\\Desktop\\GyroDataProcessing\\gyroDataProcessing\\GyroNoiseNN\\StableOscill1.xlsx",
+    "C:\\Users\\GreatTomato\\Desktop\\GyroDataProcessing\\gyroDataProcessing\\GyroNoiseNN\\ProgessiveOscill0.xlsx",
+    "C:\\Users\\GreatTomato\\Desktop\\GyroDataProcessing\\gyroDataProcessing\\GyroNoiseNN\\ProgessiveOscill1.xlsx",
+    "C:\\Users\\GreatTomato\\Desktop\\GyroDataProcessing\\gyroDataProcessing\\GyroNoiseNN\\StableOscill0.xlsx"
 ]
 processed_data = load_and_preprocess_data(file_paths)

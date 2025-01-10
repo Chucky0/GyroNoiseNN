@@ -1,6 +1,6 @@
 import tensorflow as tf
 from tensorflow.keras.models import Sequential
-from tensorflow.keras.layers import LSTM, Dense, Conv1D, MaxPooling1D, Flatten, GRU, BatchNormalization
+from tensorflow.keras.layers import LSTM, Dense, Conv1D, MaxPooling1D, Flatten, GRU, Input
 from tensorflow.keras.optimizers import Adam
 from tensorflow.keras.callbacks import ModelCheckpoint, EarlyStopping
 
@@ -14,10 +14,11 @@ class BaseModel:
     def build(self):
         raise NotImplementedError
 
-    def train(self, X_train, y_train, X_val, y_val, epochs=100, batch_size=32, model_filepath="model.h5"):
-        self.model.compile(optimizer=Adam(), loss='mse', metrics=['mae'])
+    def train(self, X_train, y_train, X_val, y_val, epochs=100, batch_size=32, model_filepath="model",
+              optimizer=Adam()):
+        self.model.compile(optimizer=optimizer, loss='mse', metrics=['mae'])
 
-        checkpoint = ModelCheckpoint(model_filepath, monitor='val_loss', save_best_only=True, mode='min')
+        checkpoint = ModelCheckpoint(f"{model_filepath}.keras", monitor='val_loss', save_best_only=True, mode='min')
         early_stopping = EarlyStopping(monitor='val_loss', patience=10, mode='min')
 
         history = self.model.fit(
@@ -43,7 +44,8 @@ class BaseModel:
 class LSTMModel(BaseModel):
     def build(self):
         self.model = Sequential([
-            LSTM(50, activation='relu', input_shape=(self.window_size, self.num_sensors)),
+            Input(shape=(self.window_size, self.num_sensors)),
+            LSTM(50, activation='relu'),
             Dense(1)
         ])
 
@@ -51,7 +53,8 @@ class LSTMModel(BaseModel):
 class CNNModel(BaseModel):
     def build(self):
         self.model = Sequential([
-            Conv1D(filters=64, kernel_size=3, activation='relu', input_shape=(self.window_size, self.num_sensors)),
+            Input(shape=(self.window_size, self.num_sensors)),
+            Conv1D(filters=64, kernel_size=3, activation='relu'),
             MaxPooling1D(pool_size=2),
             Flatten(),
             Dense(50, activation='relu'),
@@ -62,7 +65,8 @@ class CNNModel(BaseModel):
 class CNNLSTMModel(BaseModel):
     def build(self):
         self.model = Sequential([
-            Conv1D(filters=64, kernel_size=3, activation='relu', input_shape=(self.window_size, self.num_sensors)),
+            Input(shape=(self.window_size, self.num_sensors)),
+            Conv1D(filters=64, kernel_size=3, activation='relu'),
             MaxPooling1D(pool_size=2),
             LSTM(50, activation='relu'),
             Dense(1)
@@ -72,13 +76,13 @@ class CNNLSTMModel(BaseModel):
 class TCNModel(BaseModel):
     def build(self):
         self.model = Sequential([
-            Conv1D(filters=64, kernel_size=3, activation='relu', input_shape=(self.window_size, self.num_sensors),
-                   padding='causal'),
-            BatchNormalization(),
+            Input(shape=(self.window_size, self.num_sensors)),
+            Conv1D(filters=64, kernel_size=3, activation='relu', padding='causal'),
+            tf.keras.layers.BatchNormalization(),
             Conv1D(filters=64, kernel_size=3, activation='relu', dilation_rate=2, padding='causal'),
-            BatchNormalization(),
+            tf.keras.layers.BatchNormalization(),
             Conv1D(filters=64, kernel_size=3, activation='relu', dilation_rate=4, padding='causal'),
-            BatchNormalization(),
+            tf.keras.layers.BatchNormalization(),
             Flatten(),
             Dense(50, activation='relu'),
             Dense(1)
@@ -88,6 +92,7 @@ class TCNModel(BaseModel):
 class GRUModel(BaseModel):
     def build(self):
         self.model = Sequential([
-            GRU(50, activation='relu', input_shape=(self.window_size, self.num_sensors)),
+            Input(shape=(self.window_size, self.num_sensors)),
+            GRU(50, activation='relu'),
             Dense(1)
         ])
