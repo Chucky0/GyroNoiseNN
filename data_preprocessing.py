@@ -1,5 +1,6 @@
 import pandas as pd
 import numpy as np
+import openpyxl
 from sklearn.model_selection import train_test_split
 import os
 
@@ -52,8 +53,7 @@ def load_and_preprocess_data(file_paths, window_size=100):
         ]
 
         # Датчики
-        sensors = ['NVGyro Z', 'N1Gyro Z', 'N2Gyro Z', 'N3Gyro Z', 'N4Gyro Z', 'N5Gyro Z', 'N6Gyro Z', 'N7Gyro Z',
-                   'N8Gyro Z']
+        sensors = ['NVGyro Z', 'N1Gyro Z', 'N8Gyro Z']
 
         for stage_data in all_stages_data:
             stage_label = stage_data['Stage'].iloc[0]
@@ -138,9 +138,7 @@ def load_and_preprocess_data(file_paths, window_size=100):
 import os
 
 file_paths = [
-    "C:\\Users\\GreatTomato\\Desktop\\GyroDataProcessing\\gyroDataProcessing\\GyroNoiseNN\\StableOscill1.xlsx",
     "C:\\Users\\GreatTomato\\Desktop\\GyroDataProcessing\\gyroDataProcessing\\GyroNoiseNN\\ProgessiveOscill0.xlsx",
-    "C:\\Users\\GreatTomato\\Desktop\\GyroDataProcessing\\gyroDataProcessing\\GyroNoiseNN\\ProgessiveOscill1.xlsx",
     "C:\\Users\\GreatTomato\\Desktop\\GyroDataProcessing\\gyroDataProcessing\\GyroNoiseNN\\StableOscill0.xlsx"
 ]
 processed_data = load_and_preprocess_data(file_paths)
