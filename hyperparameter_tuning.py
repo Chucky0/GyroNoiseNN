@@ -64,7 +64,7 @@ def objective(trial, model_name, stage_sensor):
     if model_name == "LSTM":
       suggested_params = {
           "units": trial.suggest_int("units", *params[model_name]["units"]),
-          "learning_rate": trial.suggest_loguniform("learning_rate", *params[model_name]["learning_rate"]),
+          "learning_rate": trial.suggest_float("learning_rate", *params[model_name]["learning_rate"], log=True),
       }
       model = ModelClass(window_size, 1)
       model.build_with_params(**suggested_params)
@@ -73,7 +73,7 @@ def objective(trial, model_name, stage_sensor):
             "filters": trial.suggest_int("filters", *params[model_name]["filters"]),
             "kernel_size": trial.suggest_int("kernel_size", *params[model_name]["kernel_size"]),
             "dense_units": trial.suggest_int("dense_units", *params[model_name]["dense_units"]),
-            "learning_rate": trial.suggest_loguniform("learning_rate", *params[model_name]["learning_rate"]),
+            "learning_rate": trial.suggest_float("learning_rate", *params[model_name]["learning_rate"], log=True),
         }
         model = ModelClass(window_size, 1)
         model.build_with_params(**suggested_params)
@@ -82,7 +82,7 @@ def objective(trial, model_name, stage_sensor):
             "conv_filters": trial.suggest_int("conv_filters", *params[model_name]["conv_filters"]),
             "conv_kernel_size": trial.suggest_int("conv_kernel_size", *params[model_name]["conv_kernel_size"]),
             "lstm_units": trial.suggest_int("lstm_units", *params[model_name]["lstm_units"]),
-            "learning_rate": trial.suggest_loguniform("learning_rate", *params[model_name]["learning_rate"]),
+            "learning_rate": trial.suggest_float("learning_rate", *params[model_name]["learning_rate"], log=True),
         }
         model = ModelClass(window_size, 1)
         model.build_with_params(**suggested_params)
@@ -91,14 +91,14 @@ def objective(trial, model_name, stage_sensor):
             "filters": trial.suggest_int("filters", *params[model_name]["filters"]),
             "kernel_size": trial.suggest_int("kernel_size", *params[model_name]["kernel_size"]),
             "dense_units": trial.suggest_int("dense_units", *params[model_name]["dense_units"]),
-            "learning_rate": trial.suggest_loguniform("learning_rate", *params[model_name]["learning_rate"]),
+            "learning_rate": trial.suggest_float("learning_rate", *params[model_name]["learning_rate"], log=True),
         }
         model = ModelClass(window_size, 1)
         model.build_with_params(**suggested_params)
     elif model_name == "GRU":
         suggested_params = {
             "units": trial.suggest_int("units", *params[model_name]["units"]),
-            "learning_rate": trial.suggest_loguniform("learning_rate", *params[model_name]["learning_rate"]),
+            "learning_rate": trial.suggest_float("learning_rate", *params[model_name]["learning_rate"], log=True),
         }
         model = ModelClass(window_size, 1)
         model.build_with_params(**suggested_params)
@@ -112,7 +112,7 @@ def objective(trial, model_name, stage_sensor):
     # Компіляція та навчання моделі
     optimizer = Adam(learning_rate=suggested_params['learning_rate'])
     model.model.compile(optimizer=optimizer, loss='mse')
-    model.train(X_train, y_train, X_val, y_val, epochs=50, batch_size=32, verbose=0)
+    model.train(X_train, y_train, X_val, y_val, epochs=50, batch_size=32, model_filepath=os.path.join("models", model_name, stage_sensor), optimizer=optimizer)
 
     # Оцінка моделі
     y_pred = model.predict(X_val).flatten()
@@ -124,9 +124,9 @@ def objective(trial, model_name, stage_sensor):
 # Створення та запуск дослідження Optuna
 for model_name in model_classes:
     for folder in stage_sensor_folders:
-        stage, sensor = folder.split("_", 1)
+        # stage, sensor = folder.split("_", 1) #тут помилка
         study = optuna.create_study(
-            study_name=f"{study_name}_{model_name}_{stage}_{sensor}",
+            study_name=f"{study_name}_{model_name}_{folder}",
             direction="minimize",
         )
         study.optimize(
@@ -135,12 +135,12 @@ for model_name in model_classes:
         )  # Змініть кількість ітерацій
 
         # Виведення результатів
-        print(f"Best trial for {model_name} - {stage} - {sensor}:")
+        print(f"Best trial for {model_name} - {folder}:")
         print(f"  Value: {study.best_trial.value}")
         print(f"  Params: {study.best_trial.params}")
 
         # Збереження найкращих гіперпараметрів
         best_params = study.best_trial.params
         np.savez(
-            f"best_params_{model_name}_{stage}_{sensor}.npz", **best_params
+            f"best_params_{model_name}_{folder}.npz", **best_params
         )

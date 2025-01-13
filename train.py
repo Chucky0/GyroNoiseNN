@@ -5,6 +5,7 @@ from model import LSTMModel, CNNModel, CNNLSTMModel, TCNModel, GRUModel
 import multiprocessing
 from tqdm import tqdm
 from tensorflow.keras.optimizers import Adam, RMSprop
+from tensorflow.keras.callbacks import ModelCheckpoint, EarlyStopping # Додано імпорт
 import logging
 
 # Налаштування логування
@@ -16,7 +17,7 @@ processed_data_folder = "processed_data"
 
 # Параметри
 window_size = 100
-epochs = 100
+epochs = 50  # Змінено на 50
 batch_size = 16
 learning_rate = 0.0001
 
@@ -29,16 +30,17 @@ models = {
     "GRU": GRUModel,
 }
 
+
 def train_model_for_folder(folder_path, model_name, ModelClass):
     """Функція для навчання моделі на даних з однієї папки."""
     logging.info(f"  Processing {folder_path} for {model_name}...")
-    # Використовуємо os.path.split і os.path.splitext для надійного розбиття шляху
+    print(f"  Processing {folder_path} for {model_name}...")
 
-    # Отримуємо повний шлях до папки з даними
-    full_folder_path = os.path.abspath(folder_path)
+    # Отримуємо назву директорії, що містить папку з даними (назва файлу)
+    parent_dir = os.path.basename(os.path.dirname(folder_path))
 
     # Отримуємо назву папки з даними (ProgessiveOscill0_stage_0_N1Gyro Z)
-    data_folder_name = os.path.basename(full_folder_path)
+    data_folder_name = os.path.basename(folder_path)
 
     # Розбиваємо назву папки на частини
     parts = data_folder_name.split("_")
@@ -61,7 +63,8 @@ def train_model_for_folder(folder_path, model_name, ModelClass):
     y_test = np.load(os.path.join(folder_path, "y_test.npy"))
 
     # Перевірка на NaN
-    if np.isnan(X_train).any() or np.isnan(y_train).any() or np.isnan(X_val).any() or np.isnan(y_val).any() or np.isnan(X_test).any() or np.isnan(y_test).any():
+    if np.isnan(X_train).any() or np.isnan(y_train).any() or np.isnan(X_val).any() or np.isnan(y_val).any() or np.isnan(
+            X_test).any() or np.isnan(y_test).any():
         logging.error(f"NaN values found in data for {folder_path}!")
         return None, f"{stage}_{sensor}"
 
@@ -69,14 +72,12 @@ def train_model_for_folder(folder_path, model_name, ModelClass):
     model = ModelClass(window_size, 1)
     model.build()
 
-    # Створення папки для збереження моделі
-    # Формуємо шлях до папки для збереження моделі
-    model_dir = os.path.join("models", model_name, os.path.splitext(data_folder_name)[0])
-
+    # Створення папки для збереження моделі всередині models/<model_name>/<parent_dir>
+    model_dir = os.path.join("models", model_name, parent_dir)
     os.makedirs(model_dir, exist_ok=True)
 
     # Назва файлу моделі
-    model_filename = f"{model_name}_{stage}_{sensor}"
+    model_filename = f"{model_name}_{data_folder_name}"
     model_filepath = os.path.join(model_dir, model_filename)
 
     # Словник з гіперпараметрами
@@ -95,24 +96,35 @@ def train_model_for_folder(folder_path, model_name, ModelClass):
     with open(params_filepath, "w") as f:
         json.dump(hyperparameters, f, indent=4)
 
-    # Перевірка наявності файлу з вагами
-    if os.path.exists(f"{model_filepath}.keras"):
-        logging.info(f"Loading existing weights from {model_filepath}.keras")
+    # Замість перевірки наявності файлу з вагами ми одразу намагаємось завантажити модель
+    try:
+        model = ModelClass(window_size, 1)
         model.load(f"{model_filepath}.keras")
-    else:
-        logging.info(f"No existing weights found for {model_filepath}. Training from scratch.")
+        logging.info(f"Loaded existing model from {model_filepath}.keras")
+        print(f"Loaded existing model from {model_filepath}.keras")
+        # Якщо модель завантажено, історія навчання може бути відсутня, тому повертаємо None
+        return None, f"{stage}_{sensor}"
+    except:
+        logging.info(f"No existing model found for {model_filepath}. Training from scratch.")
+        print(f"No existing model found for {model_filepath}. Training from scratch.")
+        model = ModelClass(window_size, 1)
+        model.build()
 
     # Навчання моделі
     optimizer = Adam(learning_rate=learning_rate, clipvalue=1.0)
     # optimizer = RMSprop(learning_rate=learning_rate, clipvalue=1.0)
-    history = model.train(X_train, y_train, X_val, y_val, epochs=epochs, batch_size=batch_size, model_filepath=f"{model_filepath}.keras", optimizer=optimizer)
+
+    checkpoint = ModelCheckpoint(f"{model_filepath}.keras", monitor='val_loss', save_best_only=True, mode='min',
+                                 verbose=1)
+    early_stopping = EarlyStopping(monitor='val_loss', patience=10, mode='min')
+
+    history = model.train(X_train, y_train, X_val, y_val, epochs=epochs, batch_size=batch_size,
+                          model_filepath=model_filepath, optimizer=optimizer)
 
     return history.history, f"{stage}_{sensor}"
 
-if __name__ == '__main__':
-    # Задайте шлях до папки з обробленими даними
-    processed_data_folder = "processed_data"
 
+if __name__ == '__main__':
     # Перевірка наявності папки models і створення її, якщо вона відсутня
     if not os.path.exists("models"):
         os.makedirs("models")
@@ -121,8 +133,9 @@ if __name__ == '__main__':
     histories = {}
 
     # Отримання списку всіх папок з даними
-    # Оновлено: фільтруємо тільки папки
-    stage_sensor_folders = [os.path.join(processed_data_folder, d) for d in os.listdir(processed_data_folder) if os.path.isdir(os.path.join(processed_data_folder, d))]
+    # Оновлено: шлях до папки з даними
+    stage_sensor_folders = [os.path.join(processed_data_folder, d) for d in os.listdir(processed_data_folder) if
+                            os.path.isdir(os.path.join(processed_data_folder, d))]
     total_tasks = len(stage_sensor_folders) * len(models)
 
     with tqdm(total=total_tasks, desc="Overall Progress") as progress_bar:
@@ -133,6 +146,7 @@ if __name__ == '__main__':
             # Створення пулу процесів
             with multiprocessing.Pool(processes=4) as pool:
                 # Підготовка аргументів для функції
+                # Оновлено: передаємо тільки потрібні аргументи
                 args = [(folder, model_name, ModelClass) for folder in stage_sensor_folders]
 
                 # Запуск навчання в пулі процесів
