@@ -26,9 +26,7 @@ learning_rate = 0.0001
 models = {
     "LSTM": LSTMModel,
     "CNN": CNNModel,
-    "CNNLSTM": CNNLSTMModel,
-    "TCN": TCNModel,
-    "GRU": GRUModel,
+    "CNNLSTM": CNNLSTMModel
 }
 
 
