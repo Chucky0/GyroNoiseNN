@@ -2,12 +2,9 @@ import os
 import json
 import numpy as np
 import pandas as pd
+from allantools import allantools
 from tqdm import tqdm
 from model import LSTMModel, CNNModel, CNNLSTMModel, TCNModel, GRUModel
-import matplotlib.pyplot as plt
-from statsmodels.tsa.seasonal import seasonal_decompose
-from statsmodels.tsa.stattools import acf, pacf
-import allantools
 import argparse
 import glob
 
@@ -28,10 +25,11 @@ models = {
 # Шлях до папки з експериментальними даними та моделями
 data_and_models_folder = "models_for_predict"
 
-# Перевірка та створення папки evaluation_results
-evaluation_results_dir = "predictions"
-if not os.path.exists(evaluation_results_dir):
-    os.makedirs(evaluation_results_dir)
+# Перевірка та створення папки predictions
+# ПРАВИЛЬНО: Змінна оголошена до парсера
+predictions_dir = "predictions"
+if not os.path.exists(predictions_dir):
+    os.makedirs(predictions_dir)
 
 
 def calculate_allan_deviation(data, rate, taus="octave"):
@@ -132,6 +130,10 @@ def run_predictions(models_dir, experimental_data_folder, output_folder, window_
         file_name = os.path.splitext(os.path.basename(file_path))[0]
         print(f"  Processing file: {file_name}.xlsx")
 
+        # Створюємо папку для результатів цього файлу
+        file_output_folder = os.path.join(output_folder, f"{file_name}_predictions")
+        os.makedirs(file_output_folder, exist_ok=True)
+
         df = pd.read_excel(file_path)
         if 'Time' not in df.columns:
             df['Time'] = np.arange(0, len(df) * dt, dt)
@@ -145,10 +147,10 @@ def run_predictions(models_dir, experimental_data_folder, output_folder, window_
             source_file_name = "_".join(parts[1:-3])
 
             # Перевірка чи відповідає модель поточному файлу
-            if not file_name.startswith(source_file_name):
-                print(
-                    f"      Skipping model {model_full_name} for file {file_name} as source file names do not match.")
-                continue
+            #if not file_name.startswith(source_file_name):
+             #   print(
+              #      f"      Skipping model {model_full_name} for file {file_name} as source file names do not match.")
+               # continue
 
             # Завантаження моделі та параметрів
             model_filepath = os.path.join(model_folder, f"{model_full_name}.keras")
@@ -186,20 +188,22 @@ def run_predictions(models_dir, experimental_data_folder, output_folder, window_
             if predictions_df is not None:
                 all_predictions.append(predictions_df)
 
-    # Об'єднуємо передбачення
-    if all_predictions:
-        all_predictions_df = pd.concat(all_predictions, ignore_index=True)
-        all_predictions_df.to_csv(os.path.join(output_folder, "all_predictions.csv"), index=False)
-        print(f"Saved all predictions to {os.path.join(output_folder, 'all_predictions.csv')}")
-    else:
-        print("No predictions were made.")
+                # Зберігаємо predictions_df у файл всередині папки для поточного файлу
+                output_file_name = f"{model_full_name}_predictions.csv"
+                output_file_path = os.path.join(file_output_folder, output_file_name)
+                predictions_df.to_csv(output_file_path, index=False)
+                print(f"      Predictions saved to {output_file_path}")
+
+        # Видаляємо all_predictions_df та all_predictions після обробки кожного файлу
+        all_predictions = []
+        all_predictions_df = None
 
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser(description="Програма для передбачень на основі моделей.")
     parser.add_argument("--models_dir", type=str, default="models_for_predict",
                         help="Шлях до папки з моделями та даними")
-    parser.add_argument("--output_dir", type=str, default=evaluation_results_dir,
+    parser.add_argument("--output_dir", type=str, default=predictions_dir,
                         help="Шлях до папки для збереження результатів")
 
     args = parser.parse_args()
