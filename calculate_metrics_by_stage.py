@@ -7,7 +7,6 @@ from tqdm import tqdm
 import matplotlib.pyplot as plt
 import argparse
 import glob
-import math
 
 # Параметри
 dt = 1 / 108  # Частота дискретизації
@@ -36,8 +35,8 @@ def calculate_allan_deviation(data, rate, taus="octave"):
         return None, None
 
     try:
-        data_np = data.to_numpy() if isinstance(data, pd.Series) else data # Змінено
-        (t2, ad, ade, adn) = allantools.oadev(data_np, rate=rate, data_type="freq", taus=taus) # Змінено
+        data_np = data.to_numpy() if isinstance(data, pd.Series) else data
+        (t2, ad, ade, adn) = allantools.oadev(data_np, rate=rate, data_type="freq", taus=taus)
         return t2, ad
     except Exception as e:
         print(f"Error in Allan Deviation calculation: {e}")
@@ -142,7 +141,7 @@ def process_predictions(predictions_dir, output_dir):
     all_metrics = []
 
     # Створюємо папки для кожного етапу
-    for stage in stage_boundaries.keys():
+    for stage in range(6):
         os.makedirs(os.path.join(output_dir, f"stage_{stage}"), exist_ok=True)
 
     for folder_name in tqdm(os.listdir(predictions_dir), desc="Processing predictions"):
@@ -169,34 +168,26 @@ def process_predictions(predictions_dir, output_dir):
                 continue
 
             # Для кожного етапу та сенсора розраховуємо метрики
-            for stage, (start_time, end_time) in stage_boundaries.items():
+            for stage in range(6):
               print(f"  Processing stage: {stage}")
               stage_metrics = []
               for sensor in ["N1Gyro Z", "N8Gyro Z", "NVGyro Z"]:
                 print(f"    Sensor: {sensor}")
-                for model_name in models:
+                for model_name in models.keys():
+                    print(f"      Model: {model_name}")
+                    # Перевірка, чи є дана модель в поточному датафреймі
+                    if f'{sensor}_{model_name}_stage_{stage}_predicted' not in combined_predictions_df.columns:
+                        print(f"        Column {sensor}_{model_name}_stage_{stage}_predicted not found in DataFrame. Skipping.")
+                        continue
 
-                  # Фільтруємо дані для поточного етапу та сенсора
-                  stage_data = combined_predictions_df[
-                      (combined_predictions_df['Time'] > start_time) & (combined_predictions_df['Time'] <= end_time)
-                  ]
+                    # Фільтруємо дані для поточного етапу та сенсора
+                    stage_data = combined_predictions_df
 
-                  if stage_data.empty:
-                      print(f"      No data found for Stage: {stage}, Sensor: {sensor}. Skipping.")
-                      continue
-
-                  # Перевірка, чи є дана модель в поточному датафреймі
-                  if model_name not in stage_data['Model'].unique():
-                      print(f"        Model {model_name} not found for Stage: {stage}, Sensor: {sensor}. Skipping.")
-                      continue
-                  # Фільтруємо дані для поточної моделі
-                  model_data = stage_data[stage_data['Model'] == model_name]
-
-                  # Розраховуємо метрики
-                  metrics_data = calculate_metrics_for_stage(model_data, sensor, model_name, stage, file_name,
+                    # Розраховуємо метрики
+                    metrics_data = calculate_metrics_for_stage(stage_data, sensor, model_name, stage, file_name,
                                                              os.path.join(output_dir, f"stage_{stage}"), dt)
-                  if metrics_data is not None:
-                      stage_metrics.append(metrics_data)
+                    if metrics_data is not None:
+                        stage_metrics.append(metrics_data)
 
               # Зберігаємо метрики для поточного етапу в окремий файл
               if stage_metrics:
