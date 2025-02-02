@@ -17,7 +17,7 @@ num_sensors = 3  # Кількість вхідних сенсорів
 study_name = "hyperparameter_tuning"  # Назва дослідження
 max_memory_percent = 0.85  # Збільшено до 85% від 40 гб
 max_batch_size = 256  # Експерементально максимальний batch_size
-n_trials = 50 # Кількість випробувань
+n_trials = 10 # Кількість випробувань
 # Папка для збереження чекпоїнтів
 checkpoint_dir = "optuna_checkpoints"
 os.makedirs(checkpoint_dir, exist_ok=True)
